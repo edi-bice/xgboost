@@ -35,16 +35,6 @@ public class Booster implements Serializable, KryoSerializable {
   // handle to the booster.
   private long handle = 0;
 
-  //load native library
-  static {
-    try {
-      NativeLibLoader.initXGBoost();
-    } catch (IOException ex) {
-      logger.error("load native library failed.");
-      logger.error(ex);
-    }
-  }
-
   /**
    * Create a new Booster with empty stage.
    *
@@ -70,7 +60,7 @@ public class Booster implements Serializable, KryoSerializable {
       throw new NullPointerException("modelPath : null");
     }
     Booster ret = new Booster(new HashMap<String, Object>(), new DMatrix[0]);
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterLoadModel(ret.handle, modelPath));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterLoadModel(ret.handle, modelPath));
     return ret;
   }
 
@@ -93,7 +83,7 @@ public class Booster implements Serializable, KryoSerializable {
     }
     in.close();
     Booster ret = new Booster(new HashMap<String, Object>(), new DMatrix[0]);
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(ret.handle,os.toByteArray()));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(ret.handle,os.toByteArray()));
     return ret;
   }
 
@@ -105,7 +95,7 @@ public class Booster implements Serializable, KryoSerializable {
    * @throws XGBoostError native error
    */
   public final void setParam(String key, Object value) throws XGBoostError {
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterSetParam(handle, key, value.toString()));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterSetParam(handle, key, value.toString()));
   }
 
   /**
@@ -130,7 +120,7 @@ public class Booster implements Serializable, KryoSerializable {
    * @throws XGBoostError native error
    */
   public void update(DMatrix dtrain, int iter) throws XGBoostError {
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterUpdateOneIter(handle, iter, dtrain.getHandle()));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterUpdateOneIter(handle, iter, dtrain.getHandle()));
   }
 
   /**
@@ -159,7 +149,7 @@ public class Booster implements Serializable, KryoSerializable {
       throw new AssertionError(String.format("grad/hess length mismatch %s / %s", grad.length,
               hess.length));
     }
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterBoostOneIter(handle,
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterBoostOneIter(handle,
             dtrain.getHandle(), grad, hess));
   }
 
@@ -175,7 +165,7 @@ public class Booster implements Serializable, KryoSerializable {
   public String evalSet(DMatrix[] evalMatrixs, String[] evalNames, int iter) throws XGBoostError {
     long[] handles = dmatrixsToHandles(evalMatrixs);
     String[] evalInfo = new String[1];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterEvalOneIter(handle, iter, handles, evalNames,
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterEvalOneIter(handle, iter, handles, evalNames,
             evalInfo));
     return evalInfo[0];
   }
@@ -248,7 +238,7 @@ public class Booster implements Serializable, KryoSerializable {
       optionMask = 4;
     }
     float[][] rawPredicts = new float[1][];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterPredict(handle, data.getHandle(), optionMask,
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterPredict(handle, data.getHandle(), optionMask,
             treeLimit, rawPredicts));
     int row = (int) data.rowNum();
     int col = rawPredicts[0].length / row;
@@ -326,7 +316,7 @@ public class Booster implements Serializable, KryoSerializable {
    * @param modelPath model path
    */
   public void saveModel(String modelPath) throws XGBoostError{
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterSaveModel(handle, modelPath));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterSaveModel(handle, modelPath));
   }
 
   /**
@@ -366,7 +356,7 @@ public class Booster implements Serializable, KryoSerializable {
       format = "text";
     }
     String[][] modelInfos = new String[1][];
-    JNIErrorHandle.checkCall(
+    XGBoostJNI.checkCall(
             XGBoostJNI.XGBoosterDumpModelEx(handle, featureMap, statsFlag, format, modelInfos));
     return modelInfos[0];
   }
@@ -414,7 +404,7 @@ public class Booster implements Serializable, KryoSerializable {
       statsFlag = 1;
     }
     String[][] modelInfos = new String[1][];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterDumpModelEx(handle, "", statsFlag, "text",
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterDumpModelEx(handle, "", statsFlag, "text",
             modelInfos));
     return modelInfos[0];
   }
@@ -426,7 +416,7 @@ public class Booster implements Serializable, KryoSerializable {
    */
   public byte[] toByteArray() throws XGBoostError {
     byte[][] bytes = new byte[1][];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterGetModelRaw(this.handle, bytes));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterGetModelRaw(this.handle, bytes));
     return bytes[0];
   }
 
@@ -438,7 +428,7 @@ public class Booster implements Serializable, KryoSerializable {
    */
   int loadRabitCheckpoint() throws XGBoostError {
     int[] out = new int[1];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterLoadRabitCheckpoint(this.handle, out));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterLoadRabitCheckpoint(this.handle, out));
     return out[0];
   }
 
@@ -448,7 +438,7 @@ public class Booster implements Serializable, KryoSerializable {
    * @throws XGBoostError
    */
   void saveRabitCheckpoint() throws XGBoostError {
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterSaveRabitCheckpoint(this.handle));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterSaveRabitCheckpoint(this.handle));
   }
 
   /**
@@ -462,7 +452,7 @@ public class Booster implements Serializable, KryoSerializable {
       handles = dmatrixsToHandles(cacheMats);
     }
     long[] out = new long[1];
-    JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterCreate(handles, out));
+    XGBoostJNI.checkCall(XGBoostJNI.XGBoosterCreate(handles, out));
 
     handle = out[0];
   }
@@ -496,7 +486,7 @@ public class Booster implements Serializable, KryoSerializable {
     try {
       this.init(null);
       byte[] bytes = (byte[])in.readObject();
-      JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(this.handle, bytes));
+      XGBoostJNI.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(this.handle, bytes));
     } catch (XGBoostError ex) {
       ex.printStackTrace();
       logger.error(ex.getMessage());
@@ -538,7 +528,7 @@ public class Booster implements Serializable, KryoSerializable {
       System.out.println("==== the size of the object: " + serObjSize);
       byte[] bytes = new byte[serObjSize];
       input.readBytes(bytes);
-      JNIErrorHandle.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(this.handle, bytes));
+      XGBoostJNI.checkCall(XGBoostJNI.XGBoosterLoadModelFromBuffer(this.handle, bytes));
     } catch (XGBoostError ex) {
       ex.printStackTrace();
       logger.error(ex.getMessage());
